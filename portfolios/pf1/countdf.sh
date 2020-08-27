@@ -14,12 +14,11 @@ declare -i count_non_empty_file=0
 declare -i count_empty_dir=0
 declare -i count_non_empty_dir=0
 
-#looping through the directory
-for i in $(ls $path); do
-    df="$path/$i" #path of the file in the directory 
+#looping through the given directory
+for df in $path/*; do
     #check if a directory
     if [[ -d $df ]]; then
-        #empty directory
+        #check empty directory
         if [[ -z "$(ls $df)" ]]; then
             ((count_empty_dir++))
         #non-empty directory
@@ -28,7 +27,7 @@ for i in $(ls $path); do
         fi
     #check if a file
     elif [[ -f $df ]]; then
-        #non-empty file
+        #check non-empty file
         if [[ -s $df ]]; then
             ((count_non_empty_file++))
         #empty file
@@ -41,11 +40,12 @@ for i in $(ls $path); do
     fi
 done
 
-echo "The $directory directory contains:
-        $count_non_empty_file files that contain data
-        $count_empty_file files that are empty
-        $count_non_empty_dir non-empty diirectories
-        $count_empty_dir empty directories"
+#outputing the count of files and directories
+echo "The $directory directory contains:"
+echo "$count_non_empty_file files that contain data"
+echo "$count_empty_file files that are empty"
+echo "$count_non_empty_dir non-empty diirectories"
+echo "$count_empty_dir empty directories"
 
 #successful execution
 exit 0

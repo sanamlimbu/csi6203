@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#looping until valid input is entered
 while true; do
 
     #prompt for the user input
@@ -19,7 +20,7 @@ while true; do
         if [[ "$input" -ge 20 ]] && [[ "$input" -le 40 ]]; then
             clear
             echo "Correct !!! You entered a valid value. Thanks."
-            exit 0
+            break
         #not in the range    
         else
             clear
@@ -27,4 +28,7 @@ while true; do
         fi
     fi 
 done
+
+#successful execution
+exit 0
 

@@ -18,7 +18,7 @@ len=${#VALUES[*]} #total number of elements in VALUES array
 
 #loop through all the elements in VALUES array 
 for (( j=0; j<${len}; j++ )); do
-    value=${VALUES[j]}
+    value=${VALUES[$j]}
     #value contains number only
     if [[ "$value" =~ ^[0-9]+$ ]]; then
         echo "$value is comprised of numbers only"

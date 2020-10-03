@@ -6,13 +6,17 @@
 #array to hold values read from the text file
 declare -a VALUES
 
+original_IFS=IF #save original IFS to a variable 
+IFS=$'\n' #make newline a $IFS
+
 #read values from values.txt file into the VALUES array
 declare -i i=0 
-while read line
-do
+for line in $(cat values.txt); do
     VALUES[$i]="$line"
     ((i++))
-done < values.txt
+done
+
+IFS=original_IFS #restore the original value of IFS
 
 len=${#VALUES[*]} #total number of elements in VALUES array
 

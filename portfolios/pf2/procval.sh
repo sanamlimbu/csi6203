@@ -6,7 +6,7 @@
 #array to hold values read from the text file
 declare -a VALUES
 
-original_IFS=IF #save original IFS to a variable 
+original_IFS=IFS #save original IFS to a variable 
 IFS=$'\n' #make newline a $IFS
 
 #read values from values.txt file into the VALUES array

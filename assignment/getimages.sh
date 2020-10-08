@@ -96,9 +96,7 @@ get_dir_prop(){
 cleanup(){
     if [ -f "$delete" ]; then
 
-        #awk -i inplace '!a[$0]++' input.txt
-
-        original_IFS=IFS #save original IFS to a variable 
+        original_IFS=$IFS #save original IFS to a variable 
         IFS=$'\n' #make newline a $IFS
 
         #read values from values.txt file into the VALUES array
@@ -112,7 +110,7 @@ cleanup(){
             ((i++))
         done
 
-        IFS=original_IFS #restore the original value of IFS
+        IFS=$original_IFS #restore the original value of IFS
 
         rm "$delete"
     fi     

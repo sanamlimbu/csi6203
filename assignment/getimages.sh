@@ -8,8 +8,8 @@ img_url_list=($(curl -s "https://www.ecu.edu.au/service-centres/MACSC/gallery/ga
 
 len=${#img_url_list[@]} #total number of elements in img_url_list array
 
-#array to hold all the directories created by the script
-declare -a delete_list
+#text file to hold all the directories and files names created by the script
+delete="delete.txt"
 
 #get the file size in KB
 get_file_size(){
@@ -26,6 +26,10 @@ get_dir(){
         read -p "Enter the name of directory into which you want to download image: " dirname
         if [ ! -d $dirname ]; then #directory not exist so make directory
             mkdir $dirname
+
+            #append the created directory name to the delete.txt file 
+            touch $delete
+            echo "$dirname" >> $delete
         fi
         echo $dirname #echo to return directory name
     #done 
@@ -40,13 +44,26 @@ download(){
         echo "$img_name file is present in the directory."
         read -p "If you want to overwrite, press [y/Y] or want to skip then press any key: " doption
         if [[ $doption == "y" || $doption == "Y" ]]; then #want to overwrite
-            wget -q $img_url -P $dirname #download the file and overwrite
+            #wget -q $img_url -P $dirname #download the file and overwrite
+            (cd $dirname && curl -s $img_url > $img_name)
+            
+            #append the downloaded file name to the delete.txt file 
+            touch $delete
+            echo "$dirname/$img_name" >> $delete
+
+            #displaying the download progress info
+            echo "Downloading ${img_name%.*}, with the file name ${img_name}, with a file size of $(get_file_size $dirname/$img_name)….File Download Complete"
         fi
     else #file not present in the directory
         wget -q $img_url -P $dirname #download the file
+
+        #append the downloaded file name to the delete.txt file 
+        touch $delete
+        echo "$dirname/$img_name" >> $delete
+
+        #displaying the download progress info
+        echo "Downloading ${img_name%.*}, with the file name ${img_name}, with a file size of $(get_file_size $dirname/$img_name)….File Download Complete"
     fi 
-    #displaying the download progress info
-    echo "Downloading ${img_name%.*}, with the file name ${img_name}, with a file size of $(get_file_size $dirname/$img_name)….File Download Complete"
 }
 
 validate_img_name(){
@@ -61,12 +78,12 @@ validate_img_name(){
 get_img_url(){
     img_name=$1
     for item in "${img_url_list[@]}"; do
-        img_url="$(echo $item |grep "${img_name}.jpg$")" #grab the url of the file from img_url_list
+        img_url="$(echo $item | grep "${img_name}.jpg$")" #grab the url of the file from img_url_list
         if [ "$img_url" ]; then
             break
         fi
     done
-    echo $img_url
+    echo "$img_url"
 
 }
 
@@ -76,34 +93,37 @@ get_dir_prop(){
 
 }
 
-#append directory name in the delete_list array if it does not exist
-append_delete_list(){
-    dirname=$1    
-    for dir in "${delete_list[@]}"; do
-        if [ "$dir" == "$dirname" ] ; then
-            return 0 #directory present in the array so return without appending
-        fi
-    done
-    delete_list=("${delete_list[@]}" "$dirname") #directory not present in the array so append
-}
-
-#cleanup all the files created by the script and bring into initial state 
 cleanup(){
-    if (( ${#delete_list[@]} > 0 )); then #directory names are present in the array
-        for item in "${delete_list[@]}";do
-            rm -r ${item}
+    if [ -f "$delete" ]; then
+
+        #awk -i inplace '!a[$0]++' input.txt
+
+        original_IFS=IFS #save original IFS to a variable 
+        IFS=$'\n' #make newline a $IFS
+
+        #read values from values.txt file into the VALUES array
+        declare -i i=0 
+        for line in $(cat $delete); do
+            if [ -f "$line" ]; then
+                rm -r $line
+            elif [ -d "$line" ]; then
+                rm -r $line
+            fi
+            ((i++))
         done
-        #empty the array
-        delete_list=()
-    fi
+
+        IFS=original_IFS #restore the original value of IFS
+
+        rm "$delete"
+    fi     
 }
 
 #continue the menu options until user wants to voluntarily exit
 while true; do
     echo -e "Please select a option.\n<<<<Menu Options>>>>"
-    echo -e "1) Download a specific thumbnail.\n2) Download images in a range.\n3) Download a specific number of images."
-    echo -e "4) Download ALL thumbnails.\n5) Clean up ALL files.\n6) Exit Program."
-    read -p "Please enter a option[1-6]: " option
+    echo -e "1) Download a specific thumbnail.\n2) Download thumbnails in a given range.\n3) Download a specific number of thumbnails in a given range."
+    echo -e "4) Download all thumbnails.\n5) Clean up all files created by the script.\n6) Exit Program."
+    read -p "Please enter a option [1-6]: " option
     case $option in
         1)
             clear
@@ -116,7 +136,6 @@ while true; do
                         dirname=$(get_dir) #get directory to save file
                         #downlad the image and show download progress 
                         download $img_url $dirname
-                        append_delete_list $dirname
                         break
                     else #no url for the given image name 
                         echo "No such file exists. Try again."
@@ -132,7 +151,7 @@ while true; do
 
         2)
             clear
-            echo "You have selected option (2) to download images in a range. "
+            echo "You have selected option (2) to download thumbnails in a given range. "
             dirname=$(get_dir) #get directory to save file
             read -p "Please enter start of the range: " start
             while true; do
@@ -140,13 +159,17 @@ while true; do
                     read -p "Please enter end of the range: " end
                     if validate_img_name $end; then
                         if (( 10#$end >= 10#$start )); then
-                            for ((i = $start; i <= $end; i++)); do
+                            count=0
+                            for i in $(seq -w $start $end); do
                                 img_url=$(get_img_url ${i}) #get url of the image file
                                 if [ ! -z "$img_url" ]; then #image url present in the img_url_list
+                                    ((count++))
                                     download $img_url $dirname
-                                    append_delete_list $dirname
-                                fi
+                               fi
                             done
+                            if [ "$count" == 0 ]; then
+                                echo "No any thumbnail files found in the given range."
+                            fi
                             break
                         else
                             echo "Invalid input. Please try again."
@@ -164,22 +187,45 @@ while true; do
 
         3)
             clear
-            echo "You have selected option (3) to download a specific number of images. "
+            echo "You have selected option (3) to download a specific number of thumbnails in a given range. "
             dirname=$(get_dir) #get directory to save file
-            read -p "Please enter the number of images you want to download: " num
-            #generate array of user entered size containing unique random numbers 
-            #in the range [0-146] and sort them in ascending order 
-            first_index=0 #0
-            last_index=$(($len-1)) #146 
-            random_list=($(shuf -i $first_index-$last_index -n $num | sort -n))
-            for i in "${random_list[@]}"; do
-                img_url=${img_url_list[$i]} #get image url
-                if [ ! -z "$img_url" ]; then #image url present in the img_url_list
-                    download $img_url $dirname #download image
-                    append_delete_list $dirname #update delete_list
+            read -p "Please enter start of the range: " start
+            while true; do
+                if validate_img_name $start; then
+                    read -p "Please enter end of the range: " end
+                    if validate_img_name $end; then
+                        if (( 10#$end >= 10#$start )); then
+                            range=$((10#$end - 10#$start + 1)) 
+                            echo "Please enter the number of thumbnails you want to download." 
+                            read -p "The number should be integer value greater than 0 and less than $($range+1) : " num  
+                            break
+                        else
+                            echo "Invalid input. Please try again."
+                            echo "End of the range should not be less than start of the range."
+                        fi
+                    else
+                        echo "Invalid input. Please try again."
+                    fi
+                else
+                    echo "Invalid input. Please try again."
+                    read -p "Please enter start of the range: " start
                 fi
             done
             ;;
+
+            #read -p "Please enter the number of images you want to download: " num
+            #generate array of user entered size containing unique random numbers 
+            #in the range [0-146] and sort them in ascending order 
+            #first_index=0 #0
+            #last_index=$(($len-1)) #146 
+            #random_list=($(shuf -i $first_index-$last_index -n $num | sort -n))
+            #for i in "${random_list[@]}"; do
+             #   img_url=${img_url_list[$i]} #get image url
+              #  if [ ! -z "$img_url" ]; then #image url present in the img_url_list
+               #     download $img_url $dirname #download imag #update delete_list
+                #fi 2 3 4
+            #done
+            #;;
         4)
             clear
             echo "You have selected option (4) to download all thumbnails."
@@ -189,8 +235,7 @@ while true; do
             for (( j=0; j<$len; j++ )); do # len -> total no. of elements in img_url_list  
                 img_url=${img_url_list[$j]} #get image url
                 if [ ! -z "$img_url" ]; then #image url present in the img_url_list
-                    download $img_url $dirname #download image
-                    append_delete_list $dirname #update delete_list
+                    download $img_url $dirname #download the image 
                 fi
             done
             ;;
@@ -203,7 +248,6 @@ while true; do
             ;;
         6)
             echo "Program exit."
-            cleanup
             break
             ;;
         *)

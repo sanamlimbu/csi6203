@@ -193,9 +193,47 @@ while true; do
                     read -p "Please enter end of the range: " end
                     if validate_img_name $end; then
                         if (( 10#$end >= 10#$start )); then
-                            range=$((10#$end - 10#$start + 1)) 
+                            range=$((10#$end - 10#$start + 1))
+                            temp=$((range+1)) 
+                            echo $range
                             echo "Please enter the number of thumbnails you want to download." 
-                            read -p "The number should be integer value greater than 0 and less than $($range+1) : " num  
+                            read -p "The number should be integer value greater than 0 and less than $temp : " num  
+                            while true; do
+                                if [[ $num =~ ^[0-9]+$ ]]; then
+                                    if (( 0 < $num && $num < $temp )); then
+                                        break
+                                    else
+                                        echo "Invalid input. Please try again."
+                                        echo "Please enter the number of thumbnails you want to download." 
+                                        read -p "The number should be integer value greater than 0 and less than $temp : " num
+                                    fi  
+                                else
+                                    echo "Invalid input. Please try again."
+                                    echo "Please enter the number of thumbnails you want to download." 
+                                    read -p "The number should be integer value greater than 0 and less than $temp : " num  
+                                fi
+                            done 
+        
+                            count=0
+                            #array of user entered range 
+                            range_list=($(seq -w $start $end))
+                    
+                            #generate array of user entered size containing unique random numbers 
+                            #in the given range by user and sort them in ascending order 
+                            first_index=0 
+                            last_index=$((${#range_list[@]}-1))  
+                            random_list=($(shuf -i $first_index-$last_index -n $num | sort -n))
+                            for i in "${random_list[@]}"; do
+                                img_url=$(get_img_url "${range_list[$i]}")
+                                if [ ! -z "$img_url" ]; then #image url present in the img_url_list
+                                    download $img_url $dirname #download image
+                                    ((count++))
+                                fi 
+                            done
+                            if [ "$count" == 0 ]; then
+                                echo "No any thumbnail files found in the given range."
+                            fi
+
                             break
                         else
                             echo "Invalid input. Please try again."
@@ -211,19 +249,6 @@ while true; do
             done
             ;;
 
-            #read -p "Please enter the number of images you want to download: " num
-            #generate array of user entered size containing unique random numbers 
-            #in the range [0-146] and sort them in ascending order 
-            #first_index=0 #0
-            #last_index=$(($len-1)) #146 
-            #random_list=($(shuf -i $first_index-$last_index -n $num | sort -n))
-            #for i in "${random_list[@]}"; do
-             #   img_url=${img_url_list[$i]} #get image url
-              #  if [ ! -z "$img_url" ]; then #image url present in the img_url_list
-               #     download $img_url $dirname #download imag #update delete_list
-                #fi 2 3 4
-            #done
-            #;;
         4)
             clear
             echo "You have selected option (4) to download all thumbnails."

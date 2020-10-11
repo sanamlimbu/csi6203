@@ -17,7 +17,7 @@ get_file_size(){
     file_bytes=$(du -b $file_path | cut -f1) #get file size in bytes
     #change bytes to kilobytes using awk to deal with float value
     file_kbytes=$( echo $file_bytes | awk '{kb=$1/1024; printf"%.2f\n", kb}' ) 
-    echo "$file_kbytes KB"
+    echo "$file_bytes $file_kbytes"
 }
 
 #get directory to save file from user
@@ -51,8 +51,12 @@ download(){
             touch $delete
             echo "$dirname/$img_name" >> $delete
 
+
             #displaying the download progress info
-            echo "Downloading ${img_name%.*}, with the file name ${img_name}, with a file size of $(get_file_size $dirname/$img_name)….File Download Complete"
+            read bytes kbytes < <(get_file_size "$dirname/$img_name") 
+            echo "Downloading ${img_name%.*}, with the file name ${img_name}, with a file size of $kbytes KB….File Download Complete"
+            ((total_count++))
+            total_size=$((total_size + bytes))
         fi
     else #file not present in the directory
         wget -q $img_url -P $dirname #download the file
@@ -62,7 +66,10 @@ download(){
         echo "$dirname/$img_name" >> $delete
 
         #displaying the download progress info
-        echo "Downloading ${img_name%.*}, with the file name ${img_name}, with a file size of $(get_file_size $dirname/$img_name)….File Download Complete"
+        read bytes kbytes < <(get_file_size "$dirname/$img_name")
+        echo "Downloading ${img_name%.*}, with the file name ${img_name}, with a file size of $kbytes KB….File Download Complete"
+        ((total_count++))
+        total_size=$((total_size + bytes))
     fi 
 }
 
@@ -84,12 +91,6 @@ get_img_url(){
         fi
     done
     echo "$img_url"
-
-}
-
-#display the properties of the directory where images are downloaded
-get_dir_prop(){
-    dirname=$1
 
 }
 
@@ -158,6 +159,8 @@ while true; do
                     if validate_img_name $end; then
                         if (( 10#$end >= 10#$start )); then
                             count=0
+                            total_size=0
+                            total_count=0
                             for i in $(seq -w $start $end); do
                                 img_url=$(get_img_url ${i}) #get url of the image file
                                 if [ ! -z "$img_url" ]; then #image url present in the img_url_list
@@ -165,7 +168,16 @@ while true; do
                                     download $img_url $dirname
                                fi
                             done
-                            if [ "$count" == 0 ]; then
+                            if (( "$total_count" > 1 )); then
+                                if (( "$total_count" >= 1048576 )); then
+                                    megabytes=$( echo $total_size | awk '{mb=$1/1048576; printf"%.2f\n", mb}' )
+                                    echo "$total_count files of total size $megabytes MB are downloaded."
+                                else
+                                    kilobytes=$( echo $total_size | awk '{kb=$1/1024; printf"%.2f\n", kb}' ) 
+                                    echo "$total_count files of total size $kilobytes KB are downloaded." 
+                                fi
+                            fi
+                            if (( "$count" == 0 )); then
                                 echo "No any thumbnail files found in the given range."
                             fi
                             break
@@ -193,9 +205,7 @@ while true; do
                     read -p "Please enter end of the range: " end
                     if validate_img_name $end; then
                         if (( 10#$end >= 10#$start )); then
-                            range=$((10#$end - 10#$start + 1))
-                            temp=$((range+1)) 
-                            echo $range
+                            temp=$((10#$end - 10#$start + 2))
                             echo "Please enter the number of thumbnails you want to download." 
                             read -p "The number should be integer value greater than 0 and less than $temp : " num  
                             while true; do
@@ -212,8 +222,10 @@ while true; do
                                     echo "Please enter the number of thumbnails you want to download." 
                                     read -p "The number should be integer value greater than 0 and less than $temp : " num  
                                 fi
-                            done 
-        
+                            done
+
+                            total_size=0
+                            total_count=0
                             count=0
                             #array of user entered range 
                             range_list=($(seq -w $start $end))
@@ -230,8 +242,19 @@ while true; do
                                     ((count++))
                                 fi 
                             done
-                            if [ "$count" == 0 ]; then
+                            if (( "$total_count" > 1 )); then
+                                if (( "$total_count" >= 1048576 )); then
+                                    megabytes=$( echo $total_size | awk '{mb=$1/1048576; printf"%.2f\n", mb}' )
+                                    echo "$total_count files of total size $megabytes MB are downloaded."
+                                else
+                                    kilobytes=$( echo $total_size | awk '{kb=$1/1024; printf"%.2f\n", kb}' ) 
+                                    echo "$total_count files of total size $kilobytes KB are downloaded." 
+                                fi
+                            fi
+                            if (( "$count" == 0 )); then
                                 echo "No any thumbnail files found in the given range."
+                            elif (( "$count" < "$num" )); then
+                                echo "In the randomly selected $num files only $count files were found having valid URL."
                             fi
 
                             break
@@ -277,5 +300,6 @@ while true; do
             echo "Invalid option. Try again"
             ;;
     esac
+
 done
 exit 0 # successful execution

@@ -26,7 +26,7 @@ get_dir(){
         echo "Enter the name of directory into which you want to download image."
         echo "Directory name should not be absolute path."
         read -p "It should be alphanumeric[0-9a-zA-Z]: " dirname
-        if [[ $dirname =~ ^[0-9a-zA-Z]+$ ]]; then 
+        if [[ $dirname =~ ^[0-9a-zA-Z]+$ ]]; then #validating alphanumeric user input
             if [ ! -d $dirname ]; then #directory not exist so make directory
                 mkdir $dirname
                 #append the created directory name to the delete.txt file 
@@ -45,7 +45,7 @@ download(){
     img_url=$1 #url of the image file as first argument
     img_name=$(sed 's/.*\///' <<< $img_url) #get the file name
     dirname=$2 #directory to save file
-    if [[ -f $dirname/$img_name ]]; then #imge file present in the directory
+    if [[ -f $dirname/$img_name ]]; then #image file present in the directory
         echo "$img_name file is present in the directory."
         read -p "If you want to overwrite, press [y/Y] or want to skip then press any key: " doption
         if [[ $doption == "y" || $doption == "Y" ]]; then #want to overwrite
@@ -159,7 +159,7 @@ cleanup(){
 while true; do
     echo -e "Please select a option.\n<<<<Menu Options>>>>"
     echo -e "1) Download a specific thumbnail.\n2) Download thumbnails in a given range.\n3) Download a specific number of thumbnails in a given range."
-    echo -e "4) Download all thumbnails.\n5) Clean up all files created by the script.\n6) Exit Program."
+    echo -e "4) Download all thumbnails.\n5) Clean up all files and directories created by the script.\n6) Exit Program."
     read -p "Please enter a option [1-6]: " option
     case $option in
         1)
@@ -171,7 +171,7 @@ while true; do
                     img_url=$(get_img_url $img_name)
                     if [ $img_url ]; then #image url is present for user entered image name
                         get_dir #get directory to save file
-                        #downlad the image and show download progress 
+                        #download the image and show download progress 
                         download $img_url $dirname
                         break
                     else #no url for the given image name 
@@ -294,9 +294,9 @@ while true; do
 
         5)
             clear
-            echo "You have selected option (5) to clean up ALL files."
+            echo "You have selected option (5) to clean up all files and directories."
             cleanup
-            echo "Clean up comleted."
+            echo "Clean up completed."
             ;;
         6)
             echo "Program exit."
@@ -306,6 +306,5 @@ while true; do
             echo "Invalid option. Try again"
             ;;
     esac
-
 done
 exit 0 # successful execution
